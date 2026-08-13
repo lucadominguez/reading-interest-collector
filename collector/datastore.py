@@ -18,6 +18,7 @@ it, did I re-read (scroll back), did I highlight it".
 import json
 import os
 import sqlite3
+import threading
 from datetime import datetime, timezone
 
 SCHEMA = """
@@ -56,6 +57,11 @@ _WRITABLE = {"kind", "rating", "app", "source", "url", "title", "page",
              "location", "selected_text", "dwell_s", "scroll_backs",
              "position_hash", "words"}
 
+# The daemon shares one connection across several threads (the dwell watcher,
+# the sampler, and the hotkey path). Serialise every write through this lock so
+# concurrent threads can't corrupt the DB or trip "database is locked".
+_write_lock = threading.Lock()
+
 
 def _now_iso():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -78,7 +84,7 @@ def connect(db_path):
     parent = os.path.dirname(os.path.abspath(db_path))
     if parent and not os.path.exists(parent):
         os.makedirs(parent, exist_ok=True)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
     _migrate(conn)
@@ -94,11 +100,12 @@ def insert_observation(conn, **fields):
         data["ts"] = _now_iso()
     cols = list(data.keys())
     qs = ",".join("?" * len(data))
-    cur = conn.execute(
-        "INSERT INTO observations (%s) VALUES (%s)" % (",".join(cols), qs),
-        [data[c] for c in cols],
-    )
-    conn.commit()
+    with _write_lock:
+        cur = conn.execute(
+            "INSERT INTO observations (%s) VALUES (%s)" % (",".join(cols), qs),
+            [data[c] for c in cols],
+        )
+        conn.commit()
     return cur.lastrowid
 
 

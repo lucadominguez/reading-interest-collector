@@ -130,7 +130,8 @@ def main():
     rating_by_key = cfg_mod.ratings_for_keys(cfg)
     hotkeys = {}
     for hk, rating in rating_by_key.items():
-        hotkeys[hk] = (lambda r=rating: write_highlight(r))
+        # pynput needs '<ctrl>+<alt>+1', config stores 'ctrl+alt+1'.
+        hotkeys[cfg_mod.pynput_hotkey(hk)] = (lambda r=rating: write_highlight(r))
         log("  %-18s -> %s", rating, hk)
     listener = keyboard.GlobalHotKeys(hotkeys)
 

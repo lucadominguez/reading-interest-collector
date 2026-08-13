@@ -19,11 +19,13 @@ if (-not (Test-Path $py)) {
 }
 
 $log = Join-Path $RepoRoot "collector.log"
+$errLog = Join-Path $RepoRoot "collector.err.log"
 # -u = unbuffered so the log is readable live
+# stdout and stderr must go to DIFFERENT files - Start-Process rejects the same file twice.
 Start-Process -FilePath $py -ArgumentList "-u", "-m", "collector.main" `
-    -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $log
+    -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $errLog
 
-Write-Host "Collector launched (hidden). Log: $log"
+Write-Host "Collector launched (hidden). Log: $log (stderr: $errLog)"
 Write-Host "Verify:  python scripts\manage.py stats"
 
 # Note: stop the daemon with:

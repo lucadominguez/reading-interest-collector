@@ -46,6 +46,20 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(rk["ctrl+alt+1"], "very_interesting")
         self.assertEqual(len(rk), len(cfg["ratings"]))
 
+    def test_pynput_hotkey_normalizes_modifiers(self):
+        # Bare modifier names are invalid in pynput HotKey.parse; they must be
+        # wrapped in angle brackets. Single chars stay bare.
+        self.assertEqual(config.pynput_hotkey("ctrl+alt+1"), "<ctrl>+<alt>+1")
+        self.assertEqual(config.pynput_hotkey("ctrl+alt+2"), "<ctrl>+<alt>+2")
+        self.assertEqual(config.pynput_hotkey("ctrl+shift+r"), "<ctrl>+<shift>+r")
+        # Already-bracketed input is not double-wrapped.
+        self.assertEqual(config.pynput_hotkey("<ctrl>+<alt>+1"), "<ctrl>+<alt>+1")
+        # Every configured default rating round-trips through pynput syntax.
+        for hk in config.DEFAULT_CONFIG["ratings"].values():
+            out = config.pynput_hotkey(hk)
+            self.assertIn("<ctrl>", out)
+            self.assertIn("<alt>", out)
+
 
 if __name__ == "__main__":
     unittest.main()

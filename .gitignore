@@ -13,6 +13,7 @@ reading_interest.jsonl
 
 # Logs
 collector.log
+collector.err.log
 
 # OS
 Thumbs.db

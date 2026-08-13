@@ -108,3 +108,22 @@ def default_config_path():
 def ratings_for_keys(cfg):
     """Return {hotkey_string: rating_label} for the current config."""
     return {hk: label for label, hk in cfg["ratings"].items()}
+
+
+def pynput_hotkey(hk):
+    """Convert a human hotkey string into pynput `GlobalHotKeys` syntax.
+
+    The config format is human-friendly (`ctrl+alt+1`) but pynput's
+    `HotKey.parse` only accepts modifiers / named keys wrapped in angle
+    brackets (`<ctrl>+<alt>+1`). pynput treats single characters as bare
+    keycodes and everything else (<ctrl>, <space>, <f1>, ...) as named keys,
+    so: single-char tokens stay bare, every other token is wrapped.
+    """
+    parts = []
+    for raw in hk.split("+"):
+        token = raw.strip().lower()
+        if token.startswith("<") and token.endswith(">"):
+            token = token[1:-1]
+        parts.append(token if len(token) == 1 else "<%s>" % token)
+    return "+".join(parts)
+

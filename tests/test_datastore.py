@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import tempfile
+import threading
 import unittest
 
 from collector import datastore
@@ -98,6 +99,43 @@ class DatastoreTest(unittest.TestCase):
                                selected_text="hello world")
         self.assertEqual(datastore.count(conn, kind="dwell"), 1)
         conn.close()
+
+    def test_concurrent_writes_across_threads(self):
+        # The daemon calls insert from several threads (dwell watcher, sampler,
+        # hotkey path) on the one shared connection. With check_same_thread=False
+        # and the internal write lock this must not raise or lose rows.
+        errors = []
+        N_THREADS = 8
+        PER_THREAD = 25
+
+        def writer(tidx):
+            try:
+                for i in range(PER_THREAD):
+                    if (tidx + i) % 3 == 0:
+                        datastore.record_dwell(
+                            self.conn, dwell_s=3, scroll_backs=1,
+                            selected_text="thread %d row %d" % (tidx, i))
+                    elif (tidx + i) % 3 == 1:
+                        datastore.record_highlight(
+                            self.conn, rating="interesting",
+                            selected_text="thread %d row %d" % (tidx, i))
+                    else:
+                        datastore.record_control_sample(
+                            self.conn, app="chrome",
+                            source="https://example.com/%d/%d" % (tidx, i))
+            except Exception as exc:  # pragma: no cover - only on failure
+                errors.append(exc)
+
+        threads = [threading.Thread(target=writer, args=(t,))
+                   for t in range(N_THREADS)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        self.assertEqual(errors, [])
+        expected = N_THREADS * PER_THREAD
+        self.assertEqual(datastore.count(self.conn), expected)
 
 
 if __name__ == "__main__":
