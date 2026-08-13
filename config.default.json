@@ -16,6 +16,11 @@
     "interval_minutes": 5,
     "only_reading_apps": true
   },
+  "behavior": {
+    "enabled": true,
+    "sample_seconds": 3,
+    "dwell_seconds_min": 2
+  },
   "db_path": "~/reading_interest.db",
   "reading_apps": [
     "chrome", "msedge", "firefox", "brave",

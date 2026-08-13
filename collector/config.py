@@ -35,6 +35,13 @@ DEFAULT_CONFIG = {
         # Only sample when the foreground app looks like a reader/browser.
         "only_reading_apps": True,
     },
+    # Passive behavioral telemetry. Dwell tracking answers "how long was I
+    # looking at this word/passage", scroll_backs counts wheel-up re-reads.
+    "behavior": {
+        "enabled": True,
+        "sample_seconds": 3,       # how often we check the current position
+        "dwell_seconds_min": 2,    # min dwell to warrant a dwell row
+    },
     # SQLite database file. ~ is expanded.
     "db_path": "~/reading_interest.db",
     # Browser executables we recognise and treat as reading apps for sampling.

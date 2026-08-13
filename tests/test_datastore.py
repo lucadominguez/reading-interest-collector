@@ -70,6 +70,35 @@ class DatastoreTest(unittest.TestCase):
         self.assertEqual(datastore.count(conn), 1)
         conn.close()
 
+    def test_v1_schema_migrated_with_behavior_columns(self):
+        # Simulate a V1 database (no behavior columns), then open with the
+        # current code and confirm the new columns are added in place.
+        d = tempfile.mkdtemp()
+        p = os.path.join(d, "old.db")
+        old = sqlite3.connect(p)
+        old.executescript(
+            "CREATE TABLE observations (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "ts TEXT NOT NULL, kind TEXT, rating TEXT, app TEXT, source TEXT, "
+            "url TEXT, title TEXT, page INTEGER, location TEXT, selected_text TEXT);")
+        old.execute("INSERT INTO observations (ts, kind, rating) "
+                    "VALUES ('2026-01-01T00:00:00+00:00','highlight','interesting')")
+        old.commit()
+        old.close()
+
+        conn = datastore.connect(p)
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(observations)")}
+        for name in ("dwell_s", "scroll_backs", "position_hash", "words"):
+            self.assertIn(name, cols)
+        # old row preserved, new columns nullable
+        row = conn.execute("SELECT * FROM observations").fetchone()
+        self.assertEqual(row["rating"], "interesting")
+        self.assertIsNone(row["dwell_s"])
+        # new writes use the new columns
+        datastore.record_dwell(conn, dwell_s=7, scroll_backs=1,
+                               selected_text="hello world")
+        self.assertEqual(datastore.count(conn, kind="dwell"), 1)
+        conn.close()
+
 
 if __name__ == "__main__":
     unittest.main()

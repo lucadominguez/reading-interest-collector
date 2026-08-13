@@ -54,9 +54,29 @@ On a hotkey press, the collector:
    your original clipboard** so a hotkey never clobbers it.
 4. Writes one row to SQLite.
 
-A background **sampler thread** writes a `control_sample` every N minutes while
+## Behavioral signals (dwell + scroll-back)
+
+The explicit ratings are the highest-quality signal, but passive telemetry is a
+first-class part of the dataset. A `BehaviorWatcher` runs in the background and,
+every `behavior.sample_seconds`, samples where you are. It computes a
+`position_hash` (SHA-1 of the current selection, or of source+page+url), so it
+can tell **how long you stayed on a given word/passage**:
+
+- **dwell_s** - seconds the same position was held before you moved on.
+- **scroll_backs** - wheel-up events (scrolling *back up* to re-read), counted
+  by a Windows low-level mouse hook while a reading app is foreground.
+
+Stay on a position past `dwell_seconds_min` (or scroll back at all) and a
+`dwell` row is written. When you press a **highlight hotkey**, the current
+dwell + scroll-back counts are attached to that explicit labelled row - so every
+highlight carries how long you were looking at it before you labelled it.
+
+Sampling reads the selection through UI Automation only (no simulated Ctrl+C),
+so passive tracking never steals your clipboard or disrupts reading.
+
+A separate sampler thread writes `control_sample` rows every N minutes while
 you're in a reading app - provenance for passages you saw but didn't label, so
-you get neutral/negative examples rather than a dataset of only things you liked.
+you get negative/neutral examples rather than a dataset of only things you liked.
 
 ## Record format
 
@@ -65,7 +85,10 @@ Same shape regardless of app (example rows):
 ```json
 {"kind":"highlight","rating":"very_interesting","app":"SumatraPDF",
  "source":"C:\\Books\\book.pdf","page":183,"selected_text":"...",
- "ts":"2026-08-13T07:18:49+00:00"}
+ "dwell_s":12,"scroll_backs":3,"ts":"2026-08-13T07:18:49+00:00"}
+
+{"kind":"dwell","app":"SumatraPDF","source":"C:\\Books\\book.pdf","page":184,
+ "selected_text":"...","dwell_s":40,"scroll_backs":2,"ts":"..."}
 
 {"kind":"highlight","rating":"interesting","app":"browser",
  "source":"https://example.com/article","url":"https://example.com/article",
@@ -110,10 +133,12 @@ using the stored `source` + `page`, without storing whole documents at log time
 
 ```
 collector/            the Windows daemon
-  main.py             entry; wires hotkeys, capture, sampler
+  main.py             entry; wires hotkeys, capture, behavior, sampler
   capture.py          foreground window + selection capture (UIA → clipboard)
   adapters.py         SumatraPDF / browser / generic adapters
   clipboard.py        clipboard read + restore-safe Ctrl+C fallback
+  behavior.py         dwell-time tracking + scroll-back (passive telemetry core)
+  mousehook.py        Windows LL mouse hook counting wheel-up (scroll-back)
   sampler.py          control-sample thread (negative/neutral examples)
   datastore.py        SQLite schema + inserts   (cross-platform)
   config.py           JSON config               (cross-platform)
@@ -128,14 +153,15 @@ tests/                stdlib unittest suite (runs on Linux too)
 - **Lightweight log**: only the selected passage + source id are stored. Full
   context is recovered on demand later from the local file, never at log time.
 - **Raw observations preserved**: no reduction into an interest profile.
-- **Passive telemetry deferred**: rereading, dwell time, scroll-back, copy
-  events are out of scope for V1 on purpose. The sampler's control rows are the
-  only implicit signal.
+- **Passive telemetry is included**: dwell time, scroll-back (reread), and
+  control samples give the implicit signals alongside explicit ratings. Farther
+  signals (copy events, keyboard-driven re-scroll) are still out of scope.
 - **Untested portability**: the cross-platform core (datastore, config, export,
-  context, sampler logic) is unit-tested here on Linux. The Windows capture
-  layer (Win32/UIA/clipboard/hotkeys) is written defensively but has **not been
-  exercised on a real Windows desktop** from this environment - follow the
-  smoke-test step below to verify on your machine.
+  context, sampler, behavior-watcher logic) is unit-tested here on Linux. The
+  Windows capture layer (Win32/UIA/clipboard/hotkeys) and the LL mouse hook are
+  written defensively but have **not been exercised on a real Windows desktop**
+  from this environment - follow the smoke-test step below to verify on your
+  machine.
 
 ## Quick smoke test (verify capture works on your Windows box)
 

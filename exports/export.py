@@ -22,7 +22,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from collector.datastore import all_rows, connect  # noqa: E402
 
 CSV_FIELDS = ["id", "ts", "kind", "rating", "app", "source", "url",
-              "title", "page", "location", "selected_text"]
+              "title", "page", "location", "selected_text", "dwell_s",
+              "scroll_backs", "position_hash", "words"]
 
 
 def main():

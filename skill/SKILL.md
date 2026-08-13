@@ -1,7 +1,7 @@
 ---
 name: reading-interest-collector
 description: "Collect a reading-interest dataset via global hotkeys."
-version: 0.1.0
+version: 0.2.0
 author: lucadominguez, Hermes Agent
 license: MIT
 platforms: [windows]
@@ -48,6 +48,9 @@ scripts\install.ps1     # first time: venv + deps + default config
 scripts\run.ps1         # launch hidden background daemon
 ```
 
+The daemon runs everything: hotkeys, explicit highlights, a dwell/scroll-back
+watcher, and the control-sample sampler. `manage.py` reports dwell totals too.
+
 Inspection/export are cross-platform and can be run from Hermes anywhere:
 
 ```bash
@@ -86,14 +89,18 @@ Run all cross-platform commands with `workdir` set to the cloned repo root.
 3. **Smoke test on Windows**: select a sentence in SumatraPDF or a browser, press
    `Ctrl+Alt+1` (very_interesting), then `manage.py recent` shows the row with
    `source` + `selected_text`.
-4. **Configure hotkeys/adapters**: edit the JSON config, then restart the daemon.
-   `readings` map label→hotkey; `app_adapters` is the enabled adapter list
-   (`sumatrapdf`, `browser`, `generic`). Completion check: `manage.py ratings`
-   reflects the new map.
-5. **Inspect**: `manage.py stats` for per-rating counts, `manage.py search` for
-   grep, `manage.py context <id>` to pull the surrounding paragraph from the
-   local source file.
-6. **Export**: `exports/export.py --format jsonl|csv|json --out <path>`.
+4. **Verify behavioral telemetry**: keep one passage selected for >2s then move
+   on, and scroll *up* while reading. `manage.py recent` should show a `dwell`
+   row (`dwell=N s sb=M`) and highlights carrying dwell/scroll-back counts.
+5. **Configure hotkeys/adapters/behavior**: edit the JSON config, then restart
+   the daemon. `ratings` map label→hotkey; `app_adapters` is the enabled adapter
+   list (`sumatrapdf`, `browser`, `generic`); `behavior` sets the dwell threshold
+   and sampling interval. Completion check: `manage.py ratings` reflects the new
+   map, `manage.py stats` shows dwell totals.
+6. **Inspect**: `manage.py stats` for per-rating + dwell totals, `manage.py
+   search` for grep (shows dwell/scroll-back on matches), `manage.py context
+   <id>` to pull the surrounding paragraph from the local source file.
+7. **Export**: `exports/export.py --format jsonl|csv|json --out <path>`.
    Completion check: the output file exists and row count matches `stats`.
 
 ## Pitfalls
@@ -112,6 +119,14 @@ Run all cross-platform commands with `workdir` set to the cloned repo root.
 - **Sampler writes control samples** (neutral/negative examples) only when a
   reading app is in the foreground and the sampler is enabled. It never touches
   your clipboard.
+- **Dwell tracking** samples the current selection via UI Automation every
+  `behavior.sample_seconds`; if the app/reader does not expose a selection it
+  falls back to (source, page, url). It never simulates Ctrl+C, so it can't
+  disrupt reading or clobber the clipboard.
+- **Scroll-back counting** needs the Windows LL mouse hook
+  (`collector/mousehook.py`); if mousewheel events aren't delivered, only wheel
+  events while a reading app is foreground are counted and failures degrade to
+  `scroll_backs=0`. Verify with a quick wheel-up during the smoke test.
 - **The collector must be running** for hotkeys to fire. If hotkeys do nothing,
   confirm the daemon process is alive before editing config.
 - The core (datastore/config/export/context/sampler) is unit-tested on Linux; the

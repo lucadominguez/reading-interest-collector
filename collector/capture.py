@@ -88,8 +88,20 @@ def _uia_selected_text(hwnd):
         return None
 
 
-def build_context(cfg, hwnd=None):
-    """Return the full context dict for a hotkey capture."""
+def is_reading_foreground(cfg):
+    """True if the foreground app looks like a reading app (browser/reader)."""
+    fg = _foreground_window_info()
+    app = (fg.get("app") or "").lower()
+    reading = [a.lower() for a in cfg.get("reading_apps", [])]
+    return any(seg in app for seg in reading)
+
+
+def build_context(cfg, hwnd=None, allow_clipboard=True):
+    """Return the full context dict for a hotkey capture.
+
+    allow_clipboard=False skips the simulated-Ctrl+C fallback (used by the
+    dwell watcher so background sampling never touches your clipboard).
+    """
     fg = _foreground_window_info()
     if hwnd is None:
         hwnd = fg.get("hwnd")
@@ -116,7 +128,8 @@ def build_context(cfg, hwnd=None):
     method = cfg.get("capture", {}).get("method", "uia")
     if method == "uia" and hwnd:
         ctx["selected_text"] = _uia_selected_text(hwnd)
-    if not ctx["selected_text"] and cfg.get("capture", {}).get("clipboard_fallback", True):
+    if (not ctx["selected_text"] and allow_clipboard
+            and cfg.get("capture", {}).get("clipboard_fallback", True)):
         try:
             from collector.clipboard import capture_selection_via_clipboard
             ctx["selected_text"] = capture_selection_via_clipboard()

@@ -25,6 +25,9 @@ def cmd_stats(conn, _args):
     print("total observations : %d" % st["total"])
     print("highlights         : %d" % st["highlights"])
     print("control samples    : %d" % st["control_samples"])
+    print("dwells             : %d" % st["dwells"])
+    print("total dwell time   : %ds  (%.1f min)" % (st["dwell_s"], st["dwell_s"] / 60.0))
+    print("total scroll-backs : %d" % st["scroll_backs"])
     print("by rating:")
     for r, n in st["by_rating"].items() or [("(none)", 0)]:
         print("  %-18s %d" % (r, n))
@@ -32,22 +35,28 @@ def cmd_stats(conn, _args):
 
 def cmd_recent(conn, args):
     rows = conn.execute(
-        "SELECT id, ts, kind, rating, source, title, "
-        "substr(selected_text,1,60) AS snip "
+        "SELECT id, ts, kind, rating, source, title, dwell_s, scroll_backs, "
+        "substr(selected_text,1,50) AS snip "
         "FROM observations ORDER BY id DESC LIMIT ?",
         (args.limit,)).fetchall()
     if not rows:
         print("(no observations yet)")
         return
     for r in rows:
-        tag = (r["rating"] or "control") if r["kind"] == "highlight" else "CONTROL"
-        print("[%s] %s | %s | %s | %s" % (
-            tag, r["ts"], r["source"] or r["title"] or "?", r["id"], r["snip"] or ""))
+        tag = (r["rating"] or "control") if r["kind"] == "highlight" else (
+            "dwell" if r["kind"] == "dwell" else "CONTROL")
+        sig = ""
+        if r["dwell_s"] or r["scroll_backs"]:
+            sig = " dwell=%ss sb=%d" % (r["dwell_s"] or 0, r["scroll_backs"] or 0)
+        print("[%s]%s %s | %s | %s | %s" % (
+            tag, sig, r["ts"], r["source"] or r["title"] or "?",
+            r["id"], r["snip"] or ""))
 
 
 def cmd_search(conn, args):
     like = "%" + args.query + "%"
-    sql = ("SELECT id, ts, kind, rating, source, page, substr(selected_text,1,80) AS snip "
+    sql = ("SELECT id, ts, kind, rating, source, page, dwell_s, scroll_backs, "
+           "substr(selected_text,1,70) AS snip "
            "FROM observations WHERE selected_text LIKE ?")
     qargs = [like]
     if args.kind != "all":
@@ -57,8 +66,12 @@ def cmd_search(conn, args):
     rows = conn.execute(sql, qargs).fetchall()
     print("%d match(es):" % len(rows))
     for r in rows:
-        print("  #%s [%s %s] p.%s %s\n     %s" % (
-            r["id"], r["kind"], r["rating"] or "-", r["page"] if r["page"] else "?",
+        sig = ""
+        if r["dwell_s"] or r["scroll_backs"]:
+            sig = " dwell=%ss sb=%d" % (r["dwell_s"] or 0, r["scroll_backs"] or 0)
+        print("  #%s%s [%s %s] p.%s %s\n     %s" % (
+            r["id"], sig, r["kind"], r["rating"] or "-",
+            r["page"] if r["page"] else "?",
             r["source"] or "", r["snip"] or ""))
 
 
