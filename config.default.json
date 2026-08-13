@@ -1,0 +1,24 @@
+{
+  "ratings": {
+    "very_interesting": "ctrl+alt+1",
+    "interesting": "ctrl+alt+2",
+    "already_knew": "ctrl+alt+3",
+    "uninteresting": "ctrl+alt+4",
+    "research": "ctrl+alt+5"
+  },
+  "app_adapters": ["sumatrapdf", "browser", "generic"],
+  "capture": {
+    "method": "uia",
+    "clipboard_fallback": true
+  },
+  "sampler": {
+    "enabled": true,
+    "interval_minutes": 5,
+    "only_reading_apps": true
+  },
+  "db_path": "~/reading_interest.db",
+  "reading_apps": [
+    "chrome", "msedge", "firefox", "brave",
+    "sumatrapdf", "adobe", "acrobat", "foxit"
+  ]
+}

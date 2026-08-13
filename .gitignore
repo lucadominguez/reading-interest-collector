@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Data
+*.db
+*.db-journal
+reading_interest.json
+reading_interest.csv
+reading_interest.jsonl
+
+# Logs
+collector.log
+
+# OS
+Thumbs.db
+.DS_Store

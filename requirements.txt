@@ -1,0 +1,12 @@
+# Reading-interest collector - Windows daemon dependencies.
+# Cross-platform modules (config/datastore/export/context/manage) are stdlib-only
+# and need none of these.
+
+# Windows capture + hotkeys. Install with:  pip install -r requirements.txt
+pynput>=1.7.6
+pywin32>=305
+uiautomation>=2.0.17
+
+# Optional: richer PDF context recovery (collector/context.py). Without it,
+# PDF context falls back to "not recovered"; core capture is unaffected.
+pymupdf>=1.23.0
