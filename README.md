@@ -1,24 +1,22 @@
-# Reading-Interest Collector
+<p align="center"><a href="assets/presentation/banner.png"><img src="assets/presentation/banner.png" width="900" alt="Reading Interest Collector: Windows capture · Cross-platform data tools"></a></p>
 
-A tiny Windows background daemon (managed by a Hermes skill) that quietly logs
-what you react to while you read - in any app. **select text → press one hotkey
-→ keep reading.**
+# Reading Interest Collector
 
-The output is a clean, inspectable SQLite dataset of labelled passages plus
-their provenance (app, document/URL, page, timestamp). The raw signal is
-preserved so it can later be exported for model fine-tuning, preference/reward
-training, few-shot prompting, embedding/retrieval work, or evaluating
-personalized ranking.
+A Windows background collector for labelled reading passages. Select text,
+press a configured hotkey, and keep the rating with application and document
+provenance in SQLite. Cross-platform commands inspect and export the records.
 
-**This is not a recommendation engine, knowledge graph, or research system.**
-It is a logger. The dataset is the point.
+It also includes optional behavioral sampling. Those signals need careful
+interpretation: a stable selection is not eye tracking, and an unlabelled
+passage is not proof of disinterest. This repository collects observations;
+it does not contain a trained recommendation or preference model.
 
-## Why it exists
+The database may include private passages, local paths, URLs and window titles.
+Review capture settings, use it only in your own reading environment, and
+sanitize records before sharing. Clipboard restoration and app-specific
+provenance are best-effort integrations, not universal guarantees.
 
-The long-term goal is data to answer: *"given some information, how likely am I
-to think it is genuinely worth knowing?"* That needs **positive and negative
-examples**, so the collector stores explicit ratings and also periodically
-samples passages you *encountered but didn't highlight* as control samples.
+[![Keep the observation separate from its interpretation](assets/presentation/overview.png)](assets/presentation/overview.png)
 
 ## Core interaction
 
@@ -51,7 +49,7 @@ On a hotkey press, the collector:
    - **Generic** → app name + window title
 3. Grabs the **selected text**: tries the UI Automation `TextPattern` first,
    then falls back to simulating `Ctrl+C`, reading the clipboard, and **restoring
-   your original clipboard** so a hotkey never clobbers it.
+   your original clipboard** when the integration succeeds.
 4. Writes one row to SQLite.
 
 ## Behavioral signals (dwell + scroll-back)
@@ -60,7 +58,7 @@ The explicit ratings are the highest-quality signal, but passive telemetry is a
 first-class part of the dataset. A `BehaviorWatcher` runs in the background and,
 every `behavior.sample_seconds`, samples where you are. It computes a
 `position_hash` (SHA-1 of the current selection, or of source+page+url), so it
-can tell **how long you stayed on a given word/passage**:
+estimates how long the sampled selection or source position remained unchanged. It does not measure gaze or prove which word you read:
 
 - **dwell_s** - seconds the same position was held before you moved on.
 - **scroll_backs** - wheel-up events (scrolling *back up* to re-read), counted
@@ -176,3 +174,9 @@ python scripts\manage.py recent
 ## License
 
 MIT
+
+## Illustration sources
+
+The figures explain the repository’s scope; they are not captured product
+screens or benchmark results. Editable sources and rendering instructions are
+in [scripts/artwork](scripts/artwork/README.md).

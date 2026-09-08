@@ -1,0 +1,45 @@
+{
+  "title": "Reading Interest Collector",
+  "eyebrow": "Source and status",
+  "subtitle": [
+    "Mark a passage while reading.",
+    "Keep the label and its provenance."
+  ],
+  "status": "Windows capture \u00b7 Cross-platform data tools",
+  "motif": "book",
+  "accent": "#506D59",
+  "footer": "reading-interest-collector",
+  "overview_title": "Keep the observation separate from its interpretation",
+  "overview_subtitle": "Repository overview. Read the source and limitations alongside the illustration.",
+  "nodes": [
+    {
+      "icon": "book",
+      "title": "Select and rate",
+      "lines": [
+        "Hotkey captures an explicit label.",
+        "Review clipboard fallback behavior."
+      ]
+    },
+    {
+      "icon": "clock",
+      "title": "Add context",
+      "lines": [
+        "Application and source provenance.",
+        "Optional dwell and scroll signals."
+      ]
+    },
+    {
+      "icon": "database",
+      "title": "Inspect and export",
+      "lines": [
+        "Local SQLite records.",
+        "Control samples are not dislikes."
+      ]
+    }
+  ],
+  "notes": [
+    "Source-grounded overview",
+    "No runtime or outcome guarantee"
+  ],
+  "caveat": "Conceptual illustration of repository scope, not a screenshot or measured result."
+}
